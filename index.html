@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard หน่วยงาน มทร.พระนคร</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg-page: #F4F6FA; --bg-card: #FFFFFF; --bg-secondary: #F1F3F8;
+      --color-primary: #185FA5; --color-primary-light: #E6F1FB;
+      --color-teal: #0F6E56; --color-teal-light: #E1F5EE;
+      --color-amber: #854F0B; --color-amber-light: #FAEEDA;
+      --color-text: #1a1a2e; --color-text-secondary: #6B7280;
+      --color-border: rgba(0,0,0,0.08); --color-border-strong: rgba(0,0,0,0.14);
+      --radius-md: 10px; --radius-lg: 14px;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.06); --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-page: #0f1117; --bg-card: #1a1d27; --bg-secondary: #22263a;
+        --color-primary: #60A5E8; --color-primary-light: #0C2240;
+        --color-teal: #34C99A; --color-teal-light: #05281E;
+        --color-amber: #EDAB54; --color-amber-light: #2B1A04;
+        --color-text: #E8ECF4; --color-text-secondary: #9399A8;
+        --color-border: rgba(255,255,255,0.08); --color-border-strong: rgba(255,255,255,0.14);
+      }
+    }
+    body { font-family: 'Sarabun', sans-serif; background: var(--bg-page); color: var(--color-text); min-height: 100vh; font-size: 15px; }
+    .topbar { background: var(--bg-card); border-bottom: 1px solid var(--color-border); box-shadow: var(--shadow-sm); position: sticky; top: 0; z-index: 100; }
+    .topbar-inner { max-width: 1200px; margin: 0 auto; padding: 0 1.5rem; height: 58px; display: flex; align-items: center; justify-content: space-between; }
+    .topbar-brand { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 15px; }
+    .topbar-logo { width: 32px; height: 32px; background: var(--color-primary); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 16px; }
+    .topbar-right { display: flex; align-items: center; gap: 10px; }
+    .sync-status { font-size: 11px; color: var(--color-text-secondary); }
+    .sync-btn { font-family: 'Sarabun', sans-serif; font-size: 12px; padding: 6px 12px; border: 1px solid var(--color-border-strong); border-radius: 20px; background: var(--bg-secondary); color: var(--color-text-secondary); cursor: pointer; display: flex; align-items: center; gap: 5px; transition: all 0.2s; }
+    .sync-btn:hover { border-color: var(--color-primary); color: var(--color-primary); }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 1.5rem 3rem; }
+    .page-header { padding: 2rem 0 1.5rem; }
+    .badge-org { display: inline-flex; align-items: center; gap: 6px; background: var(--color-primary-light); color: var(--color-primary); font-size: 12px; font-weight: 500; padding: 4px 12px; border-radius: 20px; margin-bottom: 10px; }
+    .page-header h1 { font-size: 22px; font-weight: 600; margin-bottom: 4px; }
+    .page-header p { font-size: 13px; color: var(--color-text-secondary); }
+    .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 1.5rem; }
+    @media (max-width: 640px) { .kpi-grid { grid-template-columns: 1fr; } }
+    .kpi-card { background: var(--bg-card); border-radius: var(--radius-lg); padding: 1.25rem 1.5rem; border: 1px solid var(--color-border); box-shadow: var(--shadow-sm); position: relative; overflow: hidden; transition: box-shadow 0.2s, transform 0.2s; }
+    .kpi-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+    .kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+    .kpi-card.blue::before { background: linear-gradient(90deg, #185FA5, #60A5E8); }
+    .kpi-card.teal::before { background: linear-gradient(90deg, #0F6E56, #34C99A); }
+    .kpi-card.amber::before { background: linear-gradient(90deg, #854F0B, #EDAB54); }
+    .kpi-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; margin-bottom: 12px; }
+    .kpi-card.blue .kpi-icon { background: var(--color-primary-light); color: var(--color-primary); }
+    .kpi-card.teal .kpi-icon { background: var(--color-teal-light); color: var(--color-teal); }
+    .kpi-card.amber .kpi-icon { background: var(--color-amber-light); color: var(--color-amber); }
+    .kpi-label { font-size: 12px; color: var(--color-text-secondary); margin-bottom: 4px; font-weight: 500; }
+    .kpi-value { font-size: 36px; font-weight: 600; line-height: 1; margin-bottom: 6px; }
+    .kpi-card.blue .kpi-value { color: var(--color-primary); }
+    .kpi-card.teal .kpi-value { color: var(--color-teal); }
+    .kpi-card.amber .kpi-value { color: var(--color-amber); }
+    .kpi-sub { font-size: 11px; color: var(--color-text-secondary); }
+    .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 1.5rem; }
+    @media (max-width: 720px) { .charts-grid { grid-template-columns: 1fr; } }
+    .chart-card { background: var(--bg-card); border-radius: var(--radius-lg); border: 1px solid var(--color-border); box-shadow: var(--shadow-sm); padding: 1.25rem 1.5rem; }
+    .chart-card-title { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+    .chart-card-sub { font-size: 12px; color: var(--color-text-secondary); margin-bottom: 1rem; }
+    .chart-wrap { position: relative; height: 220px; }
+    .legend { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; font-size: 12px; color: var(--color-text-secondary); }
+    .legend span { display: flex; align-items: center; gap: 5px; }
+    .legend-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+    .table-card { background: var(--bg-card); border-radius: var(--radius-lg); border: 1px solid var(--color-border); box-shadow: var(--shadow-sm); overflow: hidden; margin-bottom: 1.5rem; }
+    .table-header { padding: 1rem 1.5rem; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; border-bottom: 1px solid var(--color-border); }
+    .table-title { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+    .search-wrap { position: relative; }
+    .search-wrap input { font-family: 'Sarabun', sans-serif; font-size: 13px; padding: 7px 12px 7px 32px; border: 1px solid var(--color-border-strong); border-radius: var(--radius-md); background: var(--bg-secondary); color: var(--color-text); width: 200px; outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
+    .search-wrap input:focus { border-color: var(--color-primary); box-shadow: 0 0 0 3px rgba(24,95,165,0.12); }
+    .search-icon { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); font-size: 15px; color: var(--color-text-secondary); pointer-events: none; }
+    .filter-row { padding: 10px 1.5rem; display: flex; gap: 6px; flex-wrap: wrap; border-bottom: 1px solid var(--color-border); background: var(--bg-secondary); }
+    .filter-btn { font-family: 'Sarabun', sans-serif; font-size: 12px; padding: 5px 12px; border: 1px solid var(--color-border-strong); border-radius: 20px; background: var(--bg-card); color: var(--color-text-secondary); cursor: pointer; transition: all 0.15s; }
+    .filter-btn:hover { border-color: var(--color-primary); color: var(--color-primary); }
+    .filter-btn.active { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    thead th { padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-secondary); background: var(--bg-secondary); border-bottom: 1px solid var(--color-border); cursor: pointer; user-select: none; white-space: nowrap; }
+    thead th:hover { color: var(--color-text); }
+    thead th.active { color: var(--color-primary); }
+    .sort-icon { margin-left: 4px; opacity: 0.4; }
+    thead th.active .sort-icon { opacity: 1; }
+    tbody tr { border-bottom: 1px solid var(--color-border); transition: background 0.1s; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: var(--bg-secondary); }
+    tbody td { padding: 11px 14px; vertical-align: middle; }
+    .badge { display: inline-flex; align-items: center; padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 500; white-space: nowrap; }
+    .badge-teach { background: var(--color-primary-light); color: var(--color-primary); }
+    .badge-support { background: var(--color-teal-light); color: var(--color-teal); }
+    .badge-na { background: var(--bg-secondary); color: var(--color-text-secondary); }
+    .mono { font-family: 'Courier New', monospace; font-size: 11px; color: var(--color-text-secondary); }
+    .dept-name { font-weight: 500; }
+    .dept-en { font-size: 11px; color: var(--color-text-secondary); margin-top: 2px; }
+    .table-footer { padding: 10px 1.5rem; font-size: 12px; color: var(--color-text-secondary); border-top: 1px solid var(--color-border); background: var(--bg-secondary); display: flex; justify-content: space-between; align-items: center; }
+    .loading-overlay { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 3rem; gap: 12px; color: var(--color-text-secondary); font-size: 13px; }
+    .spinner { width: 28px; height: 28px; border: 2px solid var(--color-border); border-top-color: var(--color-primary); border-radius: 50%; animation: spin 0.7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .error-box { background: #fff0f0; border: 1px solid #fca5a5; border-radius: var(--radius-md); padding: 1rem 1.5rem; font-size: 13px; color: #991b1b; margin: 1rem 0; line-height: 1.8; }
+    .page-footer { text-align: center; padding: 1rem 0; font-size: 12px; color: var(--color-text-secondary); }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <div class="topbar-brand">
+      <div class="topbar-logo"><i class="ti ti-building-university"></i></div>
+      มทร.พระนคร · ระบบข้อมูลหน่วยงาน
+    </div>
+    <div class="topbar-right">
+      <span class="sync-status" id="syncStatus">กำลังโหลด...</span>
+      <button class="sync-btn" onclick="loadData()">
+        <i class="ti ti-refresh"></i> รีเฟรชข้อมูล
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="page-header">
+    <div class="badge-org"><i class="ti ti-building-community"></i> สำนักงานอธิการบดี · อว 0652</div>
+    <h1>Dashboard หน่วยงานภายในมหาวิทยาลัย</h1>
+    <p>มหาวิทยาลัยเทคโนโลยีราชมงคลพระนคร · ข้อมูล ณ วันที่ 29 พฤษภาคม 2569</p>
+  </div>
+  <div id="mainContent">
+    <div class="loading-overlay">
+      <div class="spinner"></div>
+      <span>กำลังโหลดข้อมูลจาก ds_0120.xlsx...</span>
+    </div>
+  </div>
+</div>
+
+<div class="page-footer">
+  ข้อมูล: มหาวิทยาลัยเทคโนโลยีราชมงคลพระนคร · งานยุทธศาสตร์และประกัน สำนักงานอธิการบดี · ds_0120
+</div>
+
+<script>
+const EXCEL_FILE = 'ds_0120.xlsx';
+let allDepts = [], sortCol = -1, sortAsc = true, filterType = 'all';
+let donutChart = null, barChart = null;
+
+async function loadData() {
+  document.getElementById('syncStatus').textContent = 'กำลังโหลด...';
+  try {
+    const res = await fetch(EXCEL_FILE + '?t=' + Date.now());
+    if (!res.ok) throw new Error('ไม่พบไฟล์ ' + EXCEL_FILE + ' (HTTP ' + res.status + ')');
+    const ab = await res.arrayBuffer();
+    const wb = XLSX.read(ab, { type: 'array' });
+    const ws = wb.Sheets['data'];
+    if (!ws) throw new Error('ไม่พบ Sheet ชื่อ "data" ในไฟล์ Excel');
+    const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+    allDepts = rows.filter(r => {
+      const name = String(r.rmutp_department_name_th || '').trim();
+      return r.id && name && name !== 'ไม่ระบุ';
+    });
+    const now = new Date();
+    document.getElementById('syncStatus').textContent = 'อัปเดต ' + now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+    renderDashboard();
+  } catch (err) {
+    document.getElementById('syncStatus').textContent = 'โหลดไม่สำเร็จ';
+    document.getElementById('mainContent').innerHTML = `
+      <div class="error-box">
+        <strong>ไม่สามารถโหลดไฟล์ Excel ได้</strong><br>
+        กรุณาตรวจสอบว่าไฟล์ <code>ds_0120.xlsx</code> อยู่ใน GitHub repo เดียวกันกับ <code>index.html</code><br><br>
+        <small>Error: ${err.message}</small>
+      </div>`;
+  }
+}
+
+function getBadge(type) {
+  if (type && String(type).includes('เรียนการสอน')) return '<span class="badge badge-teach">จัดการเรียนการสอน</span>';
+  if (String(type) === 'หน่วยงานสนับสนุน') return '<span class="badge badge-support">สนับสนุน</span>';
+  return '<span class="badge badge-na">ไม่ระบุ</span>';
+}
+
+function renderDashboard() {
+  const total = allDepts.length;
+  const teach = allDepts.filter(d => d.rmutp_department_type && String(d.rmutp_department_type).includes('เรียนการสอน')).length;
+  const support = allDepts.filter(d => String(d.rmutp_department_type) === 'หน่วยงานสนับสนุน').length;
+  const teachPct = Math.round(teach / total * 100);
+  const supportPct = Math.round(support / total * 100);
+  const catKhana = allDepts.filter(d => String(d.rmutp_department_name_th).startsWith('คณะ') || String(d.rmutp_department_name_th).startsWith('วิทยาลัย')).length;
+  const catKong = allDepts.filter(d => String(d.rmutp_department_name_th).startsWith('กอง')).length;
+  const catSataban = allDepts.filter(d => String(d.rmutp_department_name_th).startsWith('สถาบัน')).length;
+  const catSamnak = allDepts.filter(d => String(d.rmutp_department_name_th).startsWith('สำนัก')).length;
+  const catOther = total - catKhana - catKong - catSataban - catSamnak;
+
+  document.getElementById('mainContent').innerHTML = `
+    <div class="kpi-grid">
+      <div class="kpi-card blue">
+        <div class="kpi-icon"><i class="ti ti-building-community"></i></div>
+        <div class="kpi-label">หน่วยงานทั้งหมด</div>
+        <div class="kpi-value">${total}</div>
+        <div class="kpi-sub">รหัส อว 0652.01 ถึง 0652.38</div>
+      </div>
+      <div class="kpi-card teal">
+        <div class="kpi-icon"><i class="ti ti-school"></i></div>
+        <div class="kpi-label">หน่วยงานจัดการเรียนการสอน</div>
+        <div class="kpi-value">${teach}</div>
+        <div class="kpi-sub">คณะและวิทยาลัย · ${teachPct}% ของทั้งหมด</div>
+      </div>
+      <div class="kpi-card amber">
+        <div class="kpi-icon"><i class="ti ti-tools"></i></div>
+        <div class="kpi-label">หน่วยงานสนับสนุน</div>
+        <div class="kpi-value">${support}</div>
+        <div class="kpi-sub">สำนัก สถาบัน กอง · ${supportPct}% ของทั้งหมด</div>
+      </div>
+    </div>
+
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-card-title">สัดส่วนประเภทหน่วยงาน</div>
+        <div class="chart-card-sub">จำแนกตามบทบาทหลัก</div>
+        <div class="chart-wrap"><canvas id="donutChart" role="img" aria-label="สัดส่วนประเภทหน่วยงาน"></canvas></div>
+        <div class="legend">
+          <span><span class="legend-dot" style="background:#378ADD"></span>จัดการเรียนการสอน ${teach} (${teachPct}%)</span>
+          <span><span class="legend-dot" style="background:#1D9E75"></span>สนับสนุน ${support} (${supportPct}%)</span>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title">จำนวนหน่วยงานแยกตามหมวด</div>
+        <div class="chart-card-sub">คณะ/วิทยาลัย · กอง · สถาบัน · สำนัก · อื่นๆ</div>
+        <div class="chart-wrap"><canvas id="barChart" role="img" aria-label="จำนวนหน่วยงานแยกตามหมวด"></canvas></div>
+        <div class="legend">
+          <span><span class="legend-dot" style="background:#378ADD"></span>จัดการเรียนการสอน</span>
+          <span><span class="legend-dot" style="background:#1D9E75"></span>สนับสนุน</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <div class="table-header">
+        <div class="table-title"><i class="ti ti-table"></i> รายการหน่วยงานทั้งหมด</div>
+        <div class="search-wrap">
+          <i class="ti ti-search search-icon"></i>
+          <input type="text" id="searchInput" placeholder="ค้นหาหน่วยงาน..." oninput="filterTable()">
+        </div>
+      </div>
+      <div class="filter-row">
+        <button class="filter-btn active" onclick="setFilter('all',this)">ทั้งหมด (${total})</button>
+        <button class="filter-btn" onclick="setFilter('teach',this)">จัดการเรียนการสอน (${teach})</button>
+        <button class="filter-btn" onclick="setFilter('support',this)">สนับสนุน (${support})</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th onclick="sortTable(0)">รหัส <span class="sort-icon">↕</span></th>
+              <th onclick="sortTable(1)">ชื่อหน่วยงาน <span class="sort-icon">↕</span></th>
+              <th onclick="sortTable(2)">ประเภท <span class="sort-icon">↕</span></th>
+              <th>เบอร์โทร</th>
+              <th onclick="sortTable(4)">เลขที่หนังสือ <span class="sort-icon">↕</span></th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+      <div class="table-footer">
+        <span id="tableFooter">แสดง ${total} รายการ</span>
+        <span style="font-size:11px;">ข้อมูลจากไฟล์ ds_0120.xlsx</span>
+      </div>
+    </div>`;
+
+  renderTable(allDepts);
+  renderCharts(teach, support, catKhana, catKong, catSataban, catSamnak, catOther);
+}
+
+function renderTable(data) {
+  const tbody = document.getElementById('tableBody');
+  if (!tbody) return;
+  tbody.innerHTML = data.map(d => `
+    <tr>
+      <td class="mono">${d.rmutp_department_code || d.id}</td>
+      <td>
+        <div class="dept-name">${d.rmutp_department_name_th || ''}</div>
+        <div class="dept-en">${d.rmutp_department_name_en || ''}</div>
+      </td>
+      <td>${getBadge(d.rmutp_department_type)}</td>
+      <td class="mono">${d.rmutp_department_phone || '-'}</td>
+      <td class="mono">${d.rmutp_department_mhesi || '-'}</td>
+    </tr>`).join('');
+  const footer = document.getElementById('tableFooter');
+  if (footer) footer.textContent = `แสดง ${data.length} จาก ${allDepts.length} รายการ`;
+}
+
+function getFiltered() {
+  const q = (document.getElementById('searchInput')?.value || '').toLowerCase();
+  return allDepts.filter(d => {
+    const matchFilter = filterType === 'all' ||
+      (filterType === 'teach' && String(d.rmutp_department_type || '').includes('เรียนการสอน')) ||
+      (filterType === 'support' && String(d.rmutp_department_type) === 'หน่วยงานสนับสนุน');
+    const matchSearch = !q ||
+      String(d.rmutp_department_name_th || '').toLowerCase().includes(q) ||
+      String(d.rmutp_department_name_en || '').toLowerCase().includes(q) ||
+      String(d.rmutp_department_mhesi || '').toLowerCase().includes(q);
+    return matchFilter && matchSearch;
+  });
+}
+
+function filterTable() {
+  let filtered = getFiltered();
+  if (sortCol >= 0) {
+    const keys = ['rmutp_department_code','rmutp_department_name_th','rmutp_department_type','rmutp_department_phone','rmutp_department_mhesi'];
+    filtered.sort((a, b) => {
+      const av = String(a[keys[sortCol]] || ''), bv = String(b[keys[sortCol]] || '');
+      return sortAsc ? av.localeCompare(bv, 'th') : bv.localeCompare(av, 'th');
+    });
+  }
+  renderTable(filtered);
+}
+
+function setFilter(type, btn) {
+  filterType = type;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  filterTable();
+}
+
+function sortTable(col) {
+  document.querySelectorAll('thead th').forEach((th, i) => {
+    th.classList.toggle('active', i === col);
+    const icon = th.querySelector('.sort-icon');
+    if (icon) icon.textContent = i === col ? (sortAsc ? '↑' : '↓') : '↕';
+  });
+  if (sortCol === col) sortAsc = !sortAsc; else { sortCol = col; sortAsc = true; }
+  filterTable();
+}
+
+function renderCharts(teach, support, catKhana, catKong, catSataban, catSamnak, catOther) {
+  if (donutChart) donutChart.destroy();
+  if (barChart) barChart.destroy();
+  donutChart = new Chart(document.getElementById('donutChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['จัดการเรียนการสอน','สนับสนุน'],
+      datasets: [{ data: [teach, support], backgroundColor: ['#378ADD','#1D9E75'], borderWidth: 0, hoverOffset: 6 }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, cutout: '68%', plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.raw} หน่วยงาน` } } } }
+  });
+  barChart = new Chart(document.getElementById('barChart'), {
+    type: 'bar',
+    data: {
+      labels: ['คณะ/วิทยาลัย','กอง','สถาบัน','สำนัก','อื่นๆ'],
+      datasets: [
+        { label: 'จัดการเรียนการสอน', data: [catKhana,0,0,0,0], backgroundColor: '#378ADD', borderRadius: 5, borderSkipped: false },
+        { label: 'สนับสนุน', data: [0,catKong,catSataban,catSamnak,catOther], backgroundColor: '#1D9E75', borderRadius: 5, borderSkipped: false }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { stacked: true, grid: { display: false }, ticks: { font: { size: 11, family: 'Sarabun' }, color: '#888780' } },
+        y: { stacked: true, beginAtZero: true, grid: { color: 'rgba(136,135,128,0.12)' }, ticks: { stepSize: 2, font: { size: 11 }, color: '#888780' } }
+      }
+    }
+  });
+}
+
+loadData();
+</script>
+</body>
+</html>
